@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"strconv"
 )
 
 func main() {
@@ -14,7 +15,7 @@ func main() {
 	}
 	defer inputFile.Close()
 
-	outputFile, err := os.OpenFile("out.txt", os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	outputFile, err := os.OpenFile("./out.txt", os.O_RDWR|os.O_CREATE, 0777)
 	if err != nil {
 		panic(err)
 	}
@@ -28,7 +29,7 @@ func regexpMath(input *os.File, output *os.File) {
 	scanner := bufio.NewScanner(input)
 	writer := bufio.NewWriter(output)
 	for scanner.Scan() {
-		writer.Write([]byte(getStrResult(scanner.Text()) + "\n"))
+		writer.Write([]byte(getStrResult(scanner.Text() + "\n")))
 		writer.Flush()
 	}
 	if err := scanner.Err(); err != nil {
@@ -38,16 +39,41 @@ func regexpMath(input *os.File, output *os.File) {
 
 func getStrResult(str string) string {
 	var result string
-	re := regexp.MustCompile(`^[0-9]*[-+*\/][0-9]*[=][?]$`)
+	var res int
+	re := regexp.MustCompile(`^[0-9]*[-+*\/][0-9]*[=][?][\n]$`)
+	/*Выражения для разбора*/
+	numOneR := regexp.MustCompile(`^[0-9]*`)
+	operatorR := regexp.MustCompile(`[-+*\/]`)
+	numTwoR := regexp.MustCompile(`[-+*\/][0-9]*`)
+	resultR := regexp.MustCompile(`[?]`)
 	submatch := re.FindStringSubmatch(str)
-	fmt.Println(submatch)
 	if submatch != nil {
 		for _, s := range submatch {
-			result = s
+			fmt.Println(s)
+			fmt.Println(numOneR.FindString(s))
+			numOne, err := strconv.Atoi(numOneR.FindString(s))
+			if err != nil {
+				panic(err)
+			}
+			numTwo, err := strconv.Atoi(numTwoR.FindString(s)[1:])
+			if err != nil {
+				panic(err)
+			}
+			operator := operatorR.FindString(s)
+			switch operator {
+			case "+":
+				res = numOne + numTwo
+			case "-":
+				res = numOne - numTwo
+			case "*":
+				res = numOne * numTwo
+			case "/":
+				res = numOne / numTwo
+			}
+			result = resultR.ReplaceAllString(s, strconv.Itoa(res))
 		}
 	} else {
-		result = re.ReplaceAllString(str, "")
+		result = ""
 	}
-	fmt.Println(result)
 	return result
 }
